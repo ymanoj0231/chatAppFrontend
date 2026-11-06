@@ -1217,3 +1217,78 @@ kbd {
     display: inline;
   }
 }
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card h2 {
+  margin-bottom: 8px;
+  font-size: 26px;
+  color: #1e293b;
+}
+
+.auth-card p {
+  margin-bottom: 24px;
+  color: #64748b;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #dbe1ea;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-card input:focus {
+  border-color: #6366f1;
+}
+
+.auth-card button {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #6366f1;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-card button:hover {
+  background: #4f46e5;
+}
+
+.auth-toggle {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-toggle span {
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 600;
+}

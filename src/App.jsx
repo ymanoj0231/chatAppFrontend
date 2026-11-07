@@ -69,8 +69,7 @@ function App() {
 
       const newMessage = {
         id: data.id,
-        sender:
-          data.senderId === currentUserId ? "me" : "them",
+        sender: String(data.senderId) === String(currentUserId) ? "me" : "them",
         text: data.text,
         time,
         status: "delivered",
@@ -81,7 +80,7 @@ function App() {
           if (chat.id !== data.chatId) return chat;
 
           const isActive = activeChatIdRef.current === chat.id;
-          const isOwnMessage = data.senderId === currentUserId;
+          const isOwnMessage = String(data.senderId) === String(currentUserId);
           const updatedMessages = [...chat.messages, newMessage];
           const latestMessage = updatedMessages.at(-1);
 
@@ -136,11 +135,28 @@ function App() {
   }, [activeChatId]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchChats = async () => {
+      if (!token || !currentUser) {
+        setIsLoadingChats(false);
+        return;
+      }
+
       try {
         const response = await fetch(
-          `http://localhost:3000/api/chats?userId=1`
+          "http://localhost:3000/api/chats",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
+
+        if (response.status === 401) {
+          handleLogout();
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Failed to fetch conversations");
@@ -148,9 +164,12 @@ function App() {
 
         const data = await response.json();
 
+        if (cancelled) return;
+
         const formattedChats = data.chats.map((chat) => {
           const otherParticipants = chat.participants.filter(
-            (participant) => participant.id !== 1
+            (participant) =>
+              String(participant.id) !== String(currentUser.id)
           );
 
           return {
@@ -182,28 +201,49 @@ function App() {
               ? currentId
               : formattedChats[0].id
           );
+        } else {
+          setActiveChatId(null);
         }
       } catch (error) {
-        console.error("Error fetching chats:", error);
+        if (!cancelled) {
+          console.error("Error fetching chats:", error);
+        }
       } finally {
-        setIsLoadingChats(false);
+        if (!cancelled) {
+          setIsLoadingChats(false);
+        }
       }
     };
 
     fetchChats();
-  }, []);
 
+    return () => {
+      cancelled = true;
+    };
+  }, [token, currentUser]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMessages() {
+      console.log("inside loadMessages==", activeChat)
       if (!activeChatId) return;
+      console.log("load messages triggered===")
 
       try {
         const response = await fetch(
-          `http://localhost:3000/api/chats/${encodeURIComponent(activeChatId)}/messages`
+          `http://localhost:3000/api/chats/${encodeURIComponent(activeChatId)}/messages`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
+
+        if (response.status === 401) {
+          handleLogout();
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Failed to load messages");
@@ -254,10 +294,14 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeChatId]);
-
+  }, [activeChatId, token]);
 
   const activeChat = chats.find((chat) => chat.id === activeChatId) || chats[0];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeChat?.messages.length, activeChatId]);
+
 
   const filteredChats = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -268,11 +312,9 @@ function App() {
     });
   }, [chats, search, filter]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [activeChat?.messages.length, activeChatId]);
 
-  const handleSignup = async (name, email, password) => {
+
+  const handleSignup = async (name, email, password, mobileNumber) => {
     try {
       const response = await fetch(
         "http://localhost:3000/api/auth/signup",
@@ -281,7 +323,7 @@ function App() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, mobileNumber }),
         }
       );
 
@@ -297,6 +339,18 @@ function App() {
       showToast(error.message);
       return false;
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("chatlyToken");
+    localStorage.removeItem("chatlyUser");
+
+    setToken(null);
+    setCurrentUser(null);
+
+    setChats([]);
+    setActiveChatId(null);
+    // setMessages([]);
   };
 
   const handleLogin = async (email, password) => {
@@ -443,6 +497,12 @@ function App() {
               <div className="avatar avatar-me">MK<span className="online-dot" /></div>
               <div className="profile-copy"><strong>Manoj Kumar</strong><span><span className="status-dot" /> Available</span></div>
               <button className="icon-button subtle" aria-label="Profile settings" onClick={() => showToast("Profile settings coming soon")}><ChevronDown size={17} /></button>
+              <button
+                className="logout-button"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
             </div>
 
             <button className="new-chat-button" onClick={() => setShowNewChat(true)}><Plus size={18} /> New message <span>⌘ K</span></button>
